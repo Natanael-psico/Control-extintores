@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Control de Extintores - Flota de Cabezales</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;font-family:Arial,Helvetica,sans-serif;background:#f3f6f9;color:#1f2937}
+header{background:#17365d;color:white;padding:18px 24px;display:flex;justify-content:space-between;align-items:center;gap:15px;flex-wrap:wrap}
+header h1{margin:0;font-size:24px}
+header p{margin:5px 0 0;color:#dbeafe}
+.container{max-width:1500px;margin:auto;padding:20px}
+.tabs{display:flex;gap:8px;margin-bottom:18px;flex-wrap:wrap}
+.tab{border:0;background:#dbe4ef;color:#17365d;padding:12px 20px;border-radius:8px;cursor:pointer;font-weight:bold}
+.tab.active{background:#17365d;color:#fff}
+.section{display:none}
+.section.active{display:block}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin-bottom:20px}
+.card{background:#fff;border-radius:12px;padding:18px;box-shadow:0 2px 8px #00000012;border-left:5px solid #17365d}
+.card .number{font-size:28px;font-weight:bold;margin-top:5px}
+.toolbar{background:#fff;padding:15px;border-radius:12px;box-shadow:0 2px 8px #00000012;margin-bottom:15px;display:flex;gap:10px;flex-wrap:wrap}
+input,select,button{font:inherit}
+input,select{padding:10px;border:1px solid #cbd5e1;border-radius:7px;background:white}
+button.primary{background:#17365d;color:white;border:0;padding:10px 16px;border-radius:7px;cursor:pointer;font-weight:bold}
+button.secondary{background:#e5e7eb;color:#111827;border:0;padding:10px 16px;border-radius:7px;cursor:pointer}
+button.danger{background:#dc2626;color:white;border:0;padding:10px 16px;border-radius:7px;cursor:pointer;font-weight:bold}
+.action-buttons{display:flex;gap:6px;align-items:center;white-space:nowrap}
+.table-wrap{background:#fff;border-radius:12px;box-shadow:0 2px 8px #00000012;overflow:auto}
+table{border-collapse:collapse;width:100%;min-width:1150px}
+th{background:#17365d;color:#fff;padding:11px 9px;text-align:left;position:sticky;top:0}
+td{padding:9px;border-bottom:1px solid #e5e7eb;vertical-align:middle}
+tr:hover{background:#f8fafc}
+.status{display:inline-block;padding:5px 9px;border-radius:20px;font-size:12px;font-weight:bold}
+.good{background:#dcfce7;color:#166534}.bad{background:#fee2e2;color:#991b1b}.pending{background:#fef3c7;color:#92400e}
+.expired{background:#fee2e2;color:#991b1b}.valid{background:#dcfce7;color:#166534}.nodate{background:#e5e7eb;color:#374151}
+.modal{display:none;position:fixed;inset:0;background:#0008;align-items:center;justify-content:center;padding:15px;z-index:20}
+.modal.show{display:flex}
+.modal-box{background:white;width:min(700px,100%);max-height:90vh;overflow:auto;border-radius:14px;padding:22px}
+.modal-head{display:flex;justify-content:space-between;align-items:center}
+.modal-head h2{margin-top:0}
+.form-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:14px}
+.field{display:flex;flex-direction:column;gap:6px}
+.field.full{grid-column:1/-1}
+.actions{display:flex;gap:10px;justify-content:flex-end;margin-top:18px}
+.dashboard-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:18px}
+.panel{background:white;padding:18px;border-radius:12px;box-shadow:0 2px 8px #00000012}
+.bar{height:24px;background:#e5e7eb;border-radius:20px;overflow:hidden;margin:8px 0 16px}
+.bar span{display:block;height:100%;background:#17365d}
+.legend{display:flex;justify-content:space-between;font-size:13px}
+.alert{padding:12px;border-radius:8px;margin:8px 0}
+.alert.red{background:#fee2e2;color:#991b1b}.alert.yellow{background:#fef3c7;color:#92400e}
+.small{font-size:12px;color:#64748b}
+.drag-handle{cursor:grab;font-size:18px;text-align:center;user-select:none}.drag-handle:active{cursor:grabbing}.dragging{opacity:.45}.drop-target{outline:2px dashed #17365d;outline-offset:-2px}.danger{background:#b91c1c;color:white;border:0;padding:10px 16px;border-radius:7px;cursor:pointer;font-weight:bold}.mini-danger{background:#fee2e2;color:#991b1b;border:0;padding:8px 10px;border-radius:7px;cursor:pointer;font-weight:bold}.filter-label{font-weight:bold;display:flex;align-items:center;gap:6px}
+@media(max-width:700px){.form-grid{grid-template-columns:1fr}.field.full{grid-column:auto}header h1{font-size:20px}}
+</style>
+</head>
+<body>
+<header>
+<div>
+<h1>🧯 Control de Extintores</h1>
+<p>Flota de Cabezales · 52 unidades</p>
+</div>
+<div>Control y seguimiento</div>
+</header>
+
+<div class="container">
+<div class="tabs">
+<button class="tab active" onclick="showTab('control',this)">📋 Control</button>
+<button class="tab" onclick="showTab('dashboard',this)">📊 Dashboard</button>
+</div>
+
+<section id="control" class="section active">
+<div class="cards">
+<div class="card"><div>Total de unidades</div><div class="number" id="total">52</div></div>
+<div class="card"><div>Extintores buenos</div><div class="number" id="goodCount">0</div></div>
+<div class="card"><div>Por revisar</div><div class="number" id="pendingCount">0</div></div>
+<div class="card"><div>Vencidos</div><div class="number" id="expiredCount">0</div></div>
+</div>
+
+<div class="toolbar">
+<input id="search" type="text" placeholder="🔎 Buscar código..." oninput="renderTable()">
+<select id="filter" onchange="renderTable()">
+<option value="">Todos los estados</option>
+<option value="Bueno">Bueno</option>
+<option value="Malo">Malo</option>
+<option value="Pendiente">Pendiente</option>
+</select>
+<select id="laborFilter" onchange="renderTable()" title="Filtrar por labor">
+<option value="">Todas las labores</option>
+</select>
+<button class="primary" onclick="openNew()">➕ Agregar cabezal</button>
+<button class="primary" onclick="exportExcel()">📥 Generar hoja Excel</button>
+<button class="secondary" onclick="resetData()">↺ Restablecer datos</button>
+</div>
+
+<div class="table-wrap">
+<table>
+<thead>
+<tr>
+<th>Orden</th><th>Código</th><th>Labor / operación</th><th>Estado extintor</th><th>Marchamo</th><th>Manómetro</th>
+<th>Pasador seguridad</th><th>Vencimiento</th><th>Entrega</th><th>Estado fecha</th><th>Acción</th>
+</tr>
+</thead>
+<tbody id="tbody"></tbody>
+</table>
+</div>
+<p class="small">Los datos se guardan automáticamente en este navegador mediante almacenamiento local.</p>
+</section>
+
+<section id="dashboard" class="section">
+<div class="cards">
+<div class="card"><div>Unidades</div><div class="number" id="dTotal">52</div></div>
+<div class="card"><div>Estado general bueno</div><div class="number" id="dGood">0</div></div>
+<div class="card"><div>Con alguna novedad</div><div class="number" id="dBad">0</div></div>
+<div class="card"><div>Vencidos</div><div class="number" id="dExpired">0</div></div>
+</div>
+<div class="dashboard-grid">
+<div class="panel">
+<h3>Estado del extintor</h3>
+<div class="legend"><span>Bueno</span><b id="extGoodPct">0%</b></div>
+<div class="bar"><span id="extGoodBar" style="width:0%"></span></div>
+<div class="legend"><span>Malo</span><b id="extBadPct">0%</b></div>
+<div class="bar"><span id="extBadBar" style="width:0%"></span></div>
+<div class="legend"><span>Pendiente</span><b id="extPendPct">0%</b></div>
+<div class="bar"><span id="extPendBar" style="width:0%"></span></div>
+</div>
+<div class="panel">
+<h3>Labor de las unidades</h3>
+<div id="laborSummary"></div>
+</div>
+<div class="panel">
+<h3>Revisión de componentes</h3>
+<p>Marchamos buenos: <b id="marchGood">0</b></p>
+<p>Manómetros buenos: <b id="manGood">0</b></p>
+<p>Pasadores buenos: <b id="pinGood">0</b></p>
+</div>
+<div class="panel">
+<h3>Alertas</h3>
+<div id="alerts"></div>
+</div>
+</div>
+</section>
+</div>
+
+<div class="modal" id="modal">
+<div class="modal-box">
+<div class="modal-head"><h2 id="modalTitle">Editar unidad</h2><button class="secondary" onclick="closeModal()">✕</button></div>
+<form id="form">
+<div class="form-grid">
+<div class="field"><label>Código del cabezal</label><input id="codigo" required placeholder="Ejemplo: T0102-0115"></div>
+<div class="field"><label>Labor / operación</label><select id="labor">
+<option value="">Sin asignar</option>
+<option>Jaulas a taller</option>
+<option>CAÑA</option>
+<option>Intercambio</option>
+<option>Lowboy</option>
+<option>Otra</option>
+</select></div>
+<div class="field"><label>Estado del extintor</label><select id="extintor"><option>Bueno</option><option>Malo</option><option>Pendiente</option></select></div>
+<div class="field"><label>Estado del marchamo</label><select id="marchamo"><option>Bueno</option><option>Malo</option><option>Pendiente</option></select></div>
+<div class="field"><label>Manómetro</label><select id="manometro"><option>Bueno</option><option>Malo</option><option>Pendiente</option></select></div>
+<div class="field"><label>Pasador de seguridad</label><select id="pasador"><option>Bueno</option><option>Malo</option><option>Pendiente</option></select></div>
+<div class="field"><label>Fecha de vencimiento</label><input id="vencimiento" type="date"></div>
+<div class="field"><label>Fecha de entrega</label><input id="entrega" type="date"></div>
+<div class="field full" id="otraLaborBox" style="display:none"><label>Escriba la labor</label><input id="otraLabor" placeholder="Ejemplo: Jaulas a taller"></div>
+<div class="field full"><label>Observaciones</label><input id="observaciones" placeholder="Ingrese una observación si es necesario"></div>
+</div>
+<div class="actions"><button type="button" class="secondary" onclick="closeModal()">Cancelar</button><button type="button" id="deleteBtn" class="danger" style="display:none;margin-right:auto" onclick="deleteCurrent()">🗑️ Eliminar cabezal</button><button class="primary">💾 Guardar</button></div>
+</form>
+</div>
+</div>
+
+<script>
+const STORAGE_KEY="control_extintores_52";
+const codes=[];
+for(let n=32;n<=114;n++) codes.push("T0102-"+String(n).padStart(4,"0"));
+
+function defaultData(){
+return codes.map(c=>({codigo:c,labor:"",extintor:"Pendiente",marchamo:"Pendiente",manometro:"Pendiente",pasador:"Pendiente",vencimiento:"",entrega:"",observaciones:"",added:false}));
+}
+let data=JSON.parse(localStorage.getItem(STORAGE_KEY)||"null");
+if(!Array.isArray(data)){data=defaultData();save();}
+data=data.map(x=>({...x,added:!!x.added}));
+
+data.forEach(x=>{if(x.labor===undefined)x.labor="";});
+if(!localStorage.getItem(STORAGE_KEY+"_laborSeed")){
+  const a=data.find(x=>x.codigo==="T0102-0032"); if(a) a.labor="Jaulas a taller";
+  const b=data.find(x=>x.codigo==="T0102-0099"); if(b) b.labor="CAÑA";
+  localStorage.setItem(STORAGE_KEY+"_laborSeed","1"); save();
+}
+function save(){localStorage.setItem(STORAGE_KEY,JSON.stringify(data));}
+
+function showTab(id,btn){
+document.querySelectorAll(".section").forEach(x=>x.classList.remove("active"));
+document.getElementById(id).classList.add("active");
+document.querySelectorAll(".tab").forEach(x=>x.classList.remove("active"));
+btn.classList.add("active");
+if(id==="dashboard") updateDashboard();
+}
+function badge(v){let c=v==="Bueno"?"good":v==="Malo"?"bad":"pending";return `<span class="status ${c}">${v}</span>`}
+function dateStatus(d){
+if(!d)return '<span class="status nodate">Sin fecha</span>';
+const today=new Date();today.setHours(0,0,0,0);
+const date=new Date(d+"T00:00:00");
+const diff=Math.ceil((date-today)/86400000);
+if(diff<0)return '<span class="status expired">Vencido</span>';
+if(diff<=30)return '<span class="status pending">Próximo</span>';
+return '<span class="status valid">Vigente</span>';
+}
+document.getElementById("labor").addEventListener("change",function(){
+document.getElementById("otraLaborBox").style.display=this.value==="Otra"?"block":"none";
+if(this.value!=="Otra") document.getElementById("otraLabor").value="";
+});
+function populateLaborFilter(){
+const select=document.getElementById("laborFilter");
+const current=select.value;
+const labs=[...new Set(data.map(x=>x.labor).filter(Boolean))].sort((a,b)=>a.localeCompare(b));
+select.innerHTML='<option value="">Todas las labores</option>'+labs.map(l=>`<option value="${escapeHtml(l)}">${escapeHtml(l)}</option>`).join("");
+if(labs.includes(current)) select.value=current;
+}
+function escapeHtml(v){return String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
+
+function renderTable(){
+populateLaborFilter();
+const q=document.getElementById("search").value.toLowerCase();
+const f=document.getElementById("filter").value;
+const lf=document.getElementById("laborFilter").value;
+const rows=data.map((x,i)=>({x,i})).filter(({x})=>
+(!q||x.codigo.toLowerCase().includes(q))&&
+(!f||x.extintor===f)&&(!lf||x.labor===lf)
+);
+document.getElementById("tbody").innerHTML=rows.map(({x,i})=>`
+<tr draggable="true" data-index="${i}" ondragstart="dragStart(event,${i})" ondragover="dragOver(event)" ondragleave="dragLeave(event)" ondrop="dropRow(event,${i})" ondragend="dragEnd(event)">
+<td class="drag-handle" title="Arrastre para cambiar el orden">☷</td>
+<td><b>${escapeHtml(x.codigo)}</b>${x.added?'<div class="small">Agregado</div>':''}</td>
+<td>${escapeHtml(x.labor)||'<span class="small">Sin asignar</span>'}</td><td>${badge(x.extintor)}</td><td>${badge(x.marchamo)}</td>
+<td>${badge(x.manometro)}</td><td>${badge(x.pasador)}</td>
+<td>${x.vencimiento||"—"}</td><td>${x.entrega||"—"}</td><td>${dateStatus(x.vencimiento)}</td>
+<td>
+  <div class="action-buttons">
+    <button class="primary" onclick="edit('${escapeHtml(x.codigo)}')">✏️ Editar</button>
+    <button class="danger" onclick="deleteHead('${escapeHtml(x.codigo)}')">🗑️ Eliminar</button>
+  </div>
+</td>
+</tr>`).join("");
+updateSummary();
+}
+function dragStart(e,index){e.dataTransfer.effectAllowed="move";e.dataTransfer.setData("text/plain",index);e.currentTarget.classList.add("dragging");}
+function dragOver(e){e.preventDefault();e.dataTransfer.dropEffect="move";e.currentTarget.classList.add("drop-target");}
+function dragLeave(e){e.currentTarget.classList.remove("drop-target");}
+function dragEnd(e){e.currentTarget.classList.remove("dragging","drop-target");document.querySelectorAll("#tbody tr").forEach(r=>r.classList.remove("drop-target"));}
+function dropRow(e,targetIndex){
+e.preventDefault();
+const from=Number(e.dataTransfer.getData("text/plain"));
+if(Number.isNaN(from)||from===targetIndex)return;
+const [moved]=data.splice(from,1);
+data.splice(targetIndex,0,moved);
+save();renderTable();updateDashboard();
+}
+
+function updateSummary(){
+const good=data.filter(x=>x.extintor==="Bueno").length;
+const pending=data.filter(x=>x.extintor==="Pendiente").length;
+const expired=data.filter(x=>x.vencimiento&&new Date(x.vencimiento+"T00:00:00")<new Date(new Date().toDateString())).length;
+document.getElementById("total").textContent=data.length;
+document.getElementById("goodCount").textContent=good;
+document.getElementById("pendingCount").textContent=pending;
+document.getElementById("expiredCount").textContent=expired;
+}
+let editingCode=null;
+function openNew(){
+editingCode=null;
+document.getElementById("form").reset();
+document.getElementById("codigo").readOnly=false;
+document.getElementById("modalTitle").textContent="Agregar cabezal";
+document.getElementById("deleteBtn").style.display="none";
+document.getElementById("otraLaborBox").style.display="none";
+document.getElementById("modal").classList.add("show");
+document.getElementById("codigo").focus();
+}
+function edit(code){
+const x=data.find(a=>a.codigo===code);if(!x)return;
+editingCode=code;
+document.getElementById("codigo").value=x.codigo;
+document.getElementById("codigo").readOnly=true;
+document.getElementById("labor").value=["","Jaulas a taller","CAÑA","Granel","Mecanizado","Patio","Traslado"].includes(x.labor)?x.labor:"Otra";
+document.getElementById("otraLabor").value=(document.getElementById("labor").value==="Otra"?x.labor:"");
+document.getElementById("otraLaborBox").style.display=document.getElementById("labor").value==="Otra"?"block":"none";
+document.getElementById("extintor").value=x.extintor;
+document.getElementById("marchamo").value=x.marchamo;
+document.getElementById("manometro").value=x.manometro;
+document.getElementById("pasador").value=x.pasador;
+document.getElementById("vencimiento").value=x.vencimiento;
+document.getElementById("entrega").value=x.entrega;
+document.getElementById("observaciones").value=x.observaciones;
+document.getElementById("modalTitle").textContent="Editar "+x.codigo;
+document.getElementById("deleteBtn").style.display=x.added?"block":"none";
+document.getElementById("modal").classList.add("show");
+}
+document.getElementById("form").addEventListener("submit",e=>{
+e.preventDefault();
+const code=document.getElementById("codigo").value.trim().toUpperCase();
+if(!/^T0102-\d{4}$/.test(code)){alert("El código debe tener el formato T0102-0000.");return;}
+if(!editingCode && data.some(a=>a.codigo===code)){alert("Ese cabezal ya existe.");return;}
+let x=editingCode?data.find(a=>a.codigo===editingCode):null;
+if(!x){
+x={codigo:code,labor:"",extintor:"Pendiente",marchamo:"Pendiente",manometro:"Pendiente",pasador:"Pendiente",vencimiento:"",entrega:"",observaciones:"",added:true};
+data.push(x);
+}
+x.labor=document.getElementById("labor").value==="Otra"?document.getElementById("otraLabor").value.trim():document.getElementById("labor").value;
+x.extintor=document.getElementById("extintor").value;
+x.marchamo=document.getElementById("marchamo").value;
+x.manometro=document.getElementById("manometro").value;
+x.pasador=document.getElementById("pasador").value;
+x.vencimiento=document.getElementById("vencimiento").value;
+x.entrega=document.getElementById("entrega").value;
+x.observaciones=document.getElementById("observaciones").value;
+save();closeModal();renderTable();updateDashboard();
+});
+function deleteHead(code){
+const x=data.find(a=>a.codigo===code);
+if(!x)return;
+
+if(confirm("¿Desea eliminar el cabezal "+x.codigo+"?")){
+data=data.filter(a=>a.codigo!==code);
+save();
+renderTable();
+updateDashboard();
+}
+}
+
+function deleteCurrent(){
+if(!editingCode)return;
+const x=data.find(a=>a.codigo===editingCode);
+if(!x||!x.added){alert("Solo se pueden eliminar cabezales agregados manualmente.");return;}
+if(confirm("¿Desea eliminar el cabezal "+x.codigo+"?")){
+data=data.filter(a=>a.codigo!==editingCode);
+save();closeModal();renderTable();updateDashboard();
+}
+}
+
+function closeModal(){
+document.getElementById("modal").classList.remove("show");
+}
+function updateDashboard(){
+const total=data.length;
+const good=data.filter(x=>x.extintor==="Bueno").length;
+const bad=data.filter(x=>x.extintor==="Malo").length;
+const pend=data.filter(x=>x.extintor==="Pendiente").length;
+const expired=data.filter(x=>x.vencimiento&&new Date(x.vencimiento+"T00:00:00")<new Date(new Date().toDateString())).length;
+document.getElementById("dTotal").textContent=total;
+document.getElementById("dGood").textContent=good;
+document.getElementById("dBad").textContent=bad+pend;
+document.getElementById("dExpired").textContent=expired;
+[["Good",good],["Bad",bad],["Pend",pend]].forEach(([n,v])=>{
+document.getElementById("ext"+n+"Pct").textContent=Math.round(v/total*100)+"%";
+document.getElementById("ext"+n+"Bar").style.width=(v/total*100)+"%";
+});
+document.getElementById("marchGood").textContent=data.filter(x=>x.marchamo==="Bueno").length;
+document.getElementById("manGood").textContent=data.filter(x=>x.manometro==="Bueno").length;
+document.getElementById("pinGood").textContent=data.filter(x=>x.pasador==="Bueno").length;
+const laborCounts={};
+data.forEach(x=>{const l=x.labor||"Sin asignar";laborCounts[l]=(laborCounts[l]||0)+1;});
+document.getElementById("laborSummary").innerHTML=Object.entries(laborCounts).sort((a,b)=>b[1]-a[1]).map(([l,n])=>`<p style="display:flex;justify-content:space-between;border-bottom:1px solid #eee;padding-bottom:6px"><span>${l}</span><b>${n}</b></p>`).join("");
+let alerts="";
+data.filter(x=>x.vencimiento&&new Date(x.vencimiento+"T00:00:00")<new Date(new Date().toDateString())).slice(0,10).forEach(x=>alerts+=`<div class="alert red"><b>${x.codigo}</b> — extintor vencido (${x.vencimiento})</div>`);
+data.filter(x=>x.extintor==="Malo"||x.marchamo==="Malo"||x.manometro==="Malo"||x.pasador==="Malo").slice(0,10).forEach(x=>alerts+=`<div class="alert yellow"><b>${x.codigo}</b> — requiere revisión</div>`);
+document.getElementById("alerts").innerHTML=alerts||'<div class="alert" style="background:#dcfce7;color:#166534">No hay alertas registradas.</div>';
+}
+function exportExcel(){
+let csv="Código,Labor / Operación,Estado Extintor,Estado Marchamo,Manómetro,Pasador de Seguridad,Fecha Vencimiento,Fecha Entrega,Estado Fecha,Observaciones\n";
+data.forEach(x=>{
+let estado=x.vencimiento?(new Date(x.vencimiento+"T00:00:00")<new Date(new Date().toDateString())?"Vencido":"Vigente"):"Sin fecha";
+let vals=[x.codigo,x.labor,x.extintor,x.marchamo,x.manometro,x.pasador,x.vencimiento,x.entrega,estado,x.observaciones];
+csv+=vals.map(v=>`"${String(v??"").replaceAll('"','""')}"`).join(",")+"\n";
+});
+const blob=new Blob(["\ufeff"+csv],{type:"text/csv;charset=utf-8;"});
+const url=URL.createObjectURL(blob);
+const a=document.createElement("a");a.href=url;a.download="Control_Extintores_52_Cabezales.csv";a.click();URL.revokeObjectURL(url);
+}
+function resetData(){
+if(confirm("¿Desea restablecer las 52 unidades originales a estado Pendiente? Se eliminarán también los cabezales agregados manualmente.")){data=defaultData();save();renderTable();updateDashboard();}
+}
+renderTable();updateDashboard();
+</script>
+</body>
+</html>
